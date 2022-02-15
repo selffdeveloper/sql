@@ -1,6 +1,6 @@
 -- =============================================================================
 -- KDA
--- Формат для Аптеки 76
+-- Р¤РѕСЂРјР°С‚ РґР»СЏ РђРїС‚РµРєРё 76
 -- exec [dbo].[elec_apteka76_dbf] @kz = 62414278, @email_in = 'd.kolesov@agrores.ru'
 -- =============================================================================
 
@@ -8,16 +8,16 @@ create procedure [dbo].[elec_apteka76_dbf] @kz int, @email_in varchar(255) = nul
 
 
 -- =============================================================================
--- Проверяем временную таблицу, если такая уже есть, тогда дропаем ее.
-print 'Проверяем временную таблицу, если такая уже есть, тогда дропаем ее.'
+-- РџСЂРѕРІРµСЂСЏРµРј РІСЂРµРјРµРЅРЅСѓСЋ С‚Р°Р±Р»РёС†Сѓ, РµСЃР»Рё С‚Р°РєР°СЏ СѓР¶Рµ РµСЃС‚СЊ, С‚РѕРіРґР° РґСЂРѕРїР°РµРј РµРµ.
+print 'РџСЂРѕРІРµСЂСЏРµРј РІСЂРµРјРµРЅРЅСѓСЋ С‚Р°Р±Р»РёС†Сѓ, РµСЃР»Рё С‚Р°РєР°СЏ СѓР¶Рµ РµСЃС‚СЊ, С‚РѕРіРґР° РґСЂРѕРїР°РµРј РµРµ.'
 if not exists (select * 
                from sysobjects 
                where name='#apteka76' and xtype='u')
 			   drop table #apteka76
 	
 -- =============================================================================
--- Объявление переменных
-print 'Объявление переменных'
+-- РћР±СЉСЏРІР»РµРЅРёРµ РїРµСЂРµРјРµРЅРЅС‹С…
+print 'РћР±СЉСЏРІР»РµРЅРёРµ РїРµСЂРµРјРµРЅРЅС‹С…'
 declare @cmd              varchar(512)
        ,@result           int
        ,@elec_folder      varchar(256)
@@ -29,107 +29,107 @@ declare @cmd              varchar(512)
        ,@out_file		  varchar(256)
        ,@sql_str		  varchar(1024)
        
-select @date    = rtrim(ltrim(replace(convert(CHAR(10), o.[Дата фактуры], 104), '.', '')))
-	  ,@email   = c.Email_для_электронки
-	  ,@subject = c.Тема_для_электронки
-	  ,@doc_num = isnull(o.[Номер фактуры], o.[Код заказа])
+select @date    = rtrim(ltrim(replace(convert(CHAR(10), o.[Р”Р°С‚Р° С„Р°РєС‚СѓСЂС‹], 104), '.', '')))
+	  ,@email   = c.Email_РґР»СЏ_СЌР»РµРєС‚СЂРѕРЅРєРё
+	  ,@subject = c.РўРµРјР°_РґР»СЏ_СЌР»РµРєС‚СЂРѕРЅРєРё
+	  ,@doc_num = isnull(o.[РќРѕРјРµСЂ С„Р°РєС‚СѓСЂС‹], o.[РљРѕРґ Р·Р°РєР°Р·Р°])
 from client as c
 left join orderr as o
-	on o.[Код клиента] = c.[Код клиента]
-where o.[Код заказа] = @kz
+	on o.[РљРѕРґ РєР»РёРµРЅС‚Р°] = c.[РљРѕРґ РєР»РёРµРЅС‚Р°]
+where o.[РљРѕРґ Р·Р°РєР°Р·Р°] = @kz
 
 set @elec_folder  = ltrim(rtrim('\\irk\forelec\apteka76\'))
 set @temlate_file = ltrim(rtrim('\\irk\forelec\apteka76\template\apteka76.dbf'))
 set @out_file     = @elec_folder + ltrim(rtrim(str(@doc_num))) + '.dbf'
 
 -- =============================================================================
--- Выборка
-print 'Выборка'
-select rtrim(ltrim(str(convert(varchar(12), isnull(o.[номер фактуры], o.[код заказа]))))) as n_nacl
-      ,convert(datetime, o.[дата фактуры]) as d_nacl
-      ,rtrim(ltrim(str(convert(numeric(11,0),i.[код товара])))) as code
-      ,convert(varchar(80),dbo.str2quotestr(i.[название])) as name
+-- Р’С‹Р±РѕСЂРєР°
+print 'Р’С‹Р±РѕСЂРєР°'
+select rtrim(ltrim(str(convert(varchar(12), isnull(o.[РЅРѕРјРµСЂ С„Р°РєС‚СѓСЂС‹], o.[РєРѕРґ Р·Р°РєР°Р·Р°]))))) as n_nacl
+      ,convert(datetime, o.[РґР°С‚Р° С„Р°РєС‚СѓСЂС‹]) as d_nacl
+      ,rtrim(ltrim(str(convert(numeric(11,0),i.[РєРѕРґ С‚РѕРІР°СЂР°])))) as code
+      ,convert(varchar(80),dbo.str2quotestr(i.[РЅР°Р·РІР°РЅРёРµ])) as name
       ,convert(varchar(13),dbo.str2quotestr(case 
           when isnull(i.ean, '--') = ''
             then '--'
           else i.ean
           end)) as scancod
-      ,convert(varchar(40),dbo.str2quotestr(replace(i.[фирма-производитель],'|','/'))) as factory
-      ,convert(varchar(20),dbo.str2quotestr(i.[страна])) as country
-      ,convert(numeric(14,2),rtrim(ltrim(str(oi.[количество])))) as quantity
-      ,convert(numeric(14,2), dbo.calc_sebestoimost(oi.[код заказа], i.[код товара], oi.[код поставки], null)) as price_make
-      ,convert(numeric(14,2), (oi.[цена])) as price_nake
-      ,convert(numeric(14,2), oi.[цена] * oi.[количество]) as sum_naked
-      ,convert(numeric(14,0), (isnull(oi.[ставка ндс] * 100, 0))) as nds_pr
-      ,convert(numeric(14,2), (sum(oi.[сумма ндс]))) as nds_sum
-      ,convert(numeric(14,2), (isnull(dbo.calc_reestr_cena(i.[ориентировочная цена], oi.[код поставки], i.[код товара]), 0))) as price_rees
-      ,convert(datetime,(isnull(i.[дата регистрации], ''))) as date_rees
+      ,convert(varchar(40),dbo.str2quotestr(replace(i.[С„РёСЂРјР°-РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊ],'|','/'))) as factory
+      ,convert(varchar(20),dbo.str2quotestr(i.[СЃС‚СЂР°РЅР°])) as country
+      ,convert(numeric(14,2),rtrim(ltrim(str(oi.[РєРѕР»РёС‡РµСЃС‚РІРѕ])))) as quantity
+      ,convert(numeric(14,2), dbo.calc_sebestoimost(oi.[РєРѕРґ Р·Р°РєР°Р·Р°], i.[РєРѕРґ С‚РѕРІР°СЂР°], oi.[РєРѕРґ РїРѕСЃС‚Р°РІРєРё], null)) as price_make
+      ,convert(numeric(14,2), (oi.[С†РµРЅР°])) as price_nake
+      ,convert(numeric(14,2), oi.[С†РµРЅР°] * oi.[РєРѕР»РёС‡РµСЃС‚РІРѕ]) as sum_naked
+      ,convert(numeric(14,0), (isnull(oi.[СЃС‚Р°РІРєР° РЅРґСЃ] * 100, 0))) as nds_pr
+      ,convert(numeric(14,2), (sum(oi.[СЃСѓРјРјР° РЅРґСЃ]))) as nds_sum
+      ,convert(numeric(14,2), (isnull(dbo.calc_reestr_cena(i.[РѕСЂРёРµРЅС‚РёСЂРѕРІРѕС‡РЅР°СЏ С†РµРЅР°], oi.[РєРѕРґ РїРѕСЃС‚Р°РІРєРё], i.[РєРѕРґ С‚РѕРІР°СЂР°]), 0))) as price_rees
+      ,convert(datetime,(isnull(i.[РґР°С‚Р° СЂРµРіРёСЃС‚СЂР°С†РёРё], ''))) as date_rees
       ,isnull(convert(char(1), i.life), '') as islife
-      ,convert(varchar(15),rtrim(ltrim(isnull(ii.[дата выпуска], '')))) as series
-      ,convert(datetime, isnull(s.[срок годности], '')) as date_valid
+      ,convert(varchar(15),rtrim(ltrim(isnull(ii.[РґР°С‚Р° РІС‹РїСѓСЃРєР°], '')))) as series
+      ,convert(datetime, isnull(s.[СЃСЂРѕРє РіРѕРґРЅРѕСЃС‚Рё], '')) as date_valid
       ,convert(varchar(25),dbo.str2quotestr(case 
-          when isnull(ii.[номер декларации], '') = ''
+          when isnull(ii.[РЅРѕРјРµСЂ РґРµРєР»Р°СЂР°С†РёРё], '') = ''
             then '--'
-          else ii.[номер декларации]
+          else ii.[РЅРѕРјРµСЂ РґРµРєР»Р°СЂР°С†РёРё]
           end)) as gtd
-      ,case when convert(varchar(70),isnull(s.[номер сертификата], '')) = '' then '--' else convert(varchar(70),ltrim(rtrim(s.[номер сертификата]))) end as sert
-      ,convert(varchar(30),'агроресурсы') as filial
-      ,convert(varchar(30),c.[код клиента]) /*c.[название]*/ as apteka
+      ,case when convert(varchar(70),isnull(s.[РЅРѕРјРµСЂ СЃРµСЂС‚РёС„РёРєР°С‚Р°], '')) = '' then '--' else convert(varchar(70),ltrim(rtrim(s.[РЅРѕРјРµСЂ СЃРµСЂС‚РёС„РёРєР°С‚Р°]))) end as sert
+      ,convert(varchar(30),'Р°РіСЂРѕСЂРµСЃСѓСЂСЃС‹') as filial
+      ,convert(varchar(30),c.[РєРѕРґ РєР»РёРµРЅС‚Р°]) /*c.[РЅР°Р·РІР°РЅРёРµ]*/ as apteka
 into #apteka76
 from out_item as oi
 left join orderr as o
-	on o.[Код заказа] = oi.[Код заказа]
+	on o.[РљРѕРґ Р·Р°РєР°Р·Р°] = oi.[РљРѕРґ Р·Р°РєР°Р·Р°]
 left join client as c
-	on c.[Код клиента] = o.[Код клиента]
+	on c.[РљРѕРґ РєР»РёРµРЅС‚Р°] = o.[РљРѕРґ РєР»РёРµРЅС‚Р°]
 left join info as i
-	on i.[Код товара] = oi.[Код товара]
+	on i.[РљРѕРґ С‚РѕРІР°СЂР°] = oi.[РљРѕРґ С‚РѕРІР°СЂР°]
 left join in_item as ii
-	on ii.[Код товара] = oi.[Код товара] and ii.[Код поставки] = oi.[Код поставки]
+	on ii.[РљРѕРґ С‚РѕРІР°СЂР°] = oi.[РљРѕРґ С‚РѕРІР°СЂР°] and ii.[РљРѕРґ РїРѕСЃС‚Р°РІРєРё] = oi.[РљРѕРґ РїРѕСЃС‚Р°РІРєРё]
 left join series as s
-	on s.[Код товара] = ii.[Код товара] and s.[Дата выпуска] = ii.[Дата выпуска]
-where o.[Код заказа] = @kz
-GROUP BY o.[Номер фактуры],o.[Код заказа],o.[Дата фактуры],i.[Код товара],i.Название,i.[Фирма-производитель],i.Страна
-,oi.Количество,oi.Цена,oi.[Ставка НДС],s.[Срок годности],ii.[Номер декларации],ii.[Дата выпуска],s.[Дата выдачи сертификата]
-,s.center_sert,s.[Номер сертификата],ii.[Дата выпуска],i.ean,i.[Ориентировочная цена],oi.[Сумма с НДС],i.life,c.[Название]
-,c.[Код клиента],i.[дата регистрации],oi.[Код заказа],oi.[Код поставки],ii.маркировка,i.ean13
+	on s.[РљРѕРґ С‚РѕРІР°СЂР°] = ii.[РљРѕРґ С‚РѕРІР°СЂР°] and s.[Р”Р°С‚Р° РІС‹РїСѓСЃРєР°] = ii.[Р”Р°С‚Р° РІС‹РїСѓСЃРєР°]
+where o.[РљРѕРґ Р·Р°РєР°Р·Р°] = @kz
+GROUP BY o.[РќРѕРјРµСЂ С„Р°РєС‚СѓСЂС‹],o.[РљРѕРґ Р·Р°РєР°Р·Р°],o.[Р”Р°С‚Р° С„Р°РєС‚СѓСЂС‹],i.[РљРѕРґ С‚РѕРІР°СЂР°],i.РќР°Р·РІР°РЅРёРµ,i.[Р¤РёСЂРјР°-РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊ],i.РЎС‚СЂР°РЅР°
+,oi.РљРѕР»РёС‡РµСЃС‚РІРѕ,oi.Р¦РµРЅР°,oi.[РЎС‚Р°РІРєР° РќР”РЎ],s.[РЎСЂРѕРє РіРѕРґРЅРѕСЃС‚Рё],ii.[РќРѕРјРµСЂ РґРµРєР»Р°СЂР°С†РёРё],ii.[Р”Р°С‚Р° РІС‹РїСѓСЃРєР°],s.[Р”Р°С‚Р° РІС‹РґР°С‡Рё СЃРµСЂС‚РёС„РёРєР°С‚Р°]
+,s.center_sert,s.[РќРѕРјРµСЂ СЃРµСЂС‚РёС„РёРєР°С‚Р°],ii.[Р”Р°С‚Р° РІС‹РїСѓСЃРєР°],i.ean,i.[РћСЂРёРµРЅС‚РёСЂРѕРІРѕС‡РЅР°СЏ С†РµРЅР°],oi.[РЎСѓРјРјР° СЃ РќР”РЎ],i.life,c.[РќР°Р·РІР°РЅРёРµ]
+,c.[РљРѕРґ РєР»РёРµРЅС‚Р°],i.[РґР°С‚Р° СЂРµРіРёСЃС‚СЂР°С†РёРё],oi.[РљРѕРґ Р·Р°РєР°Р·Р°],oi.[РљРѕРґ РїРѕСЃС‚Р°РІРєРё],ii.РјР°СЂРєРёСЂРѕРІРєР°,i.ean13
 ORDER BY NAME
 
 -- =============================================================================
--- Перемещаем шаблон
-print 'Перемещаем шаблон'
+-- РџРµСЂРµРјРµС‰Р°РµРј С€Р°Р±Р»РѕРЅ
+print 'РџРµСЂРµРјРµС‰Р°РµРј С€Р°Р±Р»РѕРЅ'
 declare @copy_to varchar(256) = '\\irk\forelec\apteka76\apteka76.dbf'
 exec copy_file @from = @temlate_file, @to = @copy_to
 
 -- =============================================================================
--- Заполняем шаблон и ловим ошибки
-print 'Заполняем шаблон и ловим ошибки'
+-- Р—Р°РїРѕР»РЅСЏРµРј С€Р°Р±Р»РѕРЅ Рё Р»РѕРІРёРј РѕС€РёР±РєРё
+print 'Р—Р°РїРѕР»РЅСЏРµРј С€Р°Р±Р»РѕРЅ Рё Р»РѕРІРёРј РѕС€РёР±РєРё'
 set @sql_str = 'insert into opendatasource(''microsoft.ace.oledb.12.0'',''data source = ' + ltrim(rtrim(@elec_folder)) + ' ;extended properties = dbase iv'')...apteka76 select * from #apteka76'
     begin try
         execute(@sql_str)
     end try
     begin catch
 		print '================================================================='
-		print 'Ошибка:'
+		print 'РћС€РёР±РєР°:'
 		print error_message()
 		print '================================================================='
 		print char(1)
 		print '================================================================='
-		print 'Запрос:'
+		print 'Р—Р°РїСЂРѕСЃ:'
 		print @sql_str
 		print '================================================================='
     end catch
 	
 -- =============================================================================
--- Переименовываем файлик
+-- РџРµСЂРµРёРјРµРЅРѕРІС‹РІР°РµРј С„Р°Р№Р»РёРє
 
-print 'Переименовываем файлик'
+print 'РџРµСЂРµРёРјРµРЅРѕРІС‹РІР°РµРј С„Р°Р№Р»РёРє'
 declare @old_file_name varchar(256) = ltrim(rtrim(@elec_folder)) + 'apteka76.dbf' 
 declare @new_file_name varchar(256) = ltrim(rtrim(@doc_num)) + '.dbf'
 exec dbo.rename_file @file_name_in = @old_file_name, @file_name_out = @new_file_name
 
 -- =============================================================================
--- Отправляем файл на почту
-print 'Отправляем файл на почту'
+-- РћС‚РїСЂР°РІР»СЏРµРј С„Р°Р№Р» РЅР° РїРѕС‡С‚Сѓ
+print 'РћС‚РїСЂР°РІР»СЏРµРј С„Р°Р№Р» РЅР° РїРѕС‡С‚Сѓ'
 
 if @email_in is not null set @email = @email_in
 
@@ -140,8 +140,8 @@ exec send_mail
 	 @message = null
 	 
 -- =============================================================================
--- Перемещаем файлик в sended
-print 'Перемещаем файлик в sended'
+-- РџРµСЂРµРјРµС‰Р°РµРј С„Р°Р№Р»РёРє РІ sended
+print 'РџРµСЂРµРјРµС‰Р°РµРј С„Р°Р№Р»РёРє РІ sended'
 declare @move_to   varchar(256) = @elec_folder + ltrim(rtrim('\sended\')) 
 exec move_file @from = @out_file, @to = @move_to
 
